@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { TextField, Button, Box } from "@mui/material";
 import axios from "../utils/axios";
 import { useAuth } from "../context/AuthContext";
+import { showToast } from "../utils/toast";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -12,9 +13,15 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await axios.post("/auth/login", { username, password });
-    login(res.data.user, res.data.token);
-    navigate("/");
+    try {
+      const res = await axios.post("/auth/login", { username, password });
+      showToast("success", "Logged in successfully ✨");
+      login(res.data.user, res.data.token);
+      navigate("/");
+    } catch (err) {
+      const msg = err.response?.data?.message || "Login failed.";
+      showToast("error", msg);
+    }
   };
 
   return (

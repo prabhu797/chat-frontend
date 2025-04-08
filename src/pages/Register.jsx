@@ -13,17 +13,21 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    await axios.post("/auth/register", {
-      username,
-      displayName,
-      password,
-    });
-
-    // Auto-login after registration
-    const res = await axios.post("/auth/login", { username, password });
-    login(res.data.user, res.data.token);
-    navigate("/");
+    try {
+      await axios.post("/auth/register", {
+        username,
+        displayName,
+        password,
+      });
+      showToast("success", res.data.message);
+      // Auto-login after registration
+      const res = await axios.post("/auth/login", { username, password });
+      login(res.data.user, res.data.token);
+      navigate("/");
+    } catch (err) {
+      const msg = err.response?.data?.message || "Registration failed.";
+      showToast("error", msg);
+    }
   };
 
   return (
