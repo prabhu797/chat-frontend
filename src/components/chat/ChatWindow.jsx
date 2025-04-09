@@ -1,5 +1,6 @@
 // src/components/chat/ChatWindow.jsx
 import { Box, Typography, Paper } from "@mui/material";
+import CallWindow from "../callUI/CallWindow";
 
 const ChatWindow = ({ messages = [], selectedUser }) => {
   return (
@@ -23,6 +24,10 @@ const ChatWindow = ({ messages = [], selectedUser }) => {
               {msg.text}
             </Paper>
           ))}
+
+          {/* 👇 Add CallWindow below the chat messages */}
+          <CallWindow remoteUserId={selectedUser._id} />
+
         </>
       ) : (
         <Typography variant="h6">Select a contact to start chatting</Typography>
