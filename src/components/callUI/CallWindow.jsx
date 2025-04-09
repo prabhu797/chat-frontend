@@ -20,9 +20,22 @@ const CallWindow = ({ remoteUserId }) => {
       </div>
       <div className="flex gap-4">
         {!isInCall && (
-          <Button variant="contained" onClick={() => startCall(remoteUserId)} disabled={isCalling}>
-            {isCalling ? "Calling..." : "Start Call"}
-          </Button>
+          <>
+            <Button
+              variant="contained"
+              onClick={() => startCall(remoteUserId, "audio")}
+              disabled={isCalling}
+            >
+              {isCalling ? "Calling..." : "Voice Call"}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => startCall(remoteUserId, "video")}
+              disabled={isCalling}
+            >
+              {isCalling ? "Calling..." : "Video Call"}
+            </Button>
+          </>
         )}
         {isInCall && (
           <Button variant="outlined" color="error" onClick={endCall}>

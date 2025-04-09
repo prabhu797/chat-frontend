@@ -15,7 +15,8 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
         ],
     };
 
-    const startPeerConnection = async (isInitiator, remoteId, offer = null) => {
+    const startPeerConnection = async (isInitiator, remoteId, offer = null, callType) => {
+        console.log(callType);
         peerConnection.current = new RTCPeerConnection(iceServers);
         setRemoteUserId(remoteId);
 
@@ -34,7 +35,8 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
             }
         };
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+        const constraints = callType === "audio" ? { audio: true, video: false } : { audio: true, video: true };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         stream.getTracks().forEach((track) =>
             peerConnection.current.addTrack(track, stream)
         );
@@ -43,16 +45,12 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
             localVideoRef.current.srcObject = stream;
         }
 
-        console.log("Hello 0");
         if (isInitiator) {
-            console.log("Hello 1");
             const generatedOffer = await peerConnection.current.createOffer();
-            console.log("Hello 2");
             await peerConnection.current.setLocalDescription(generatedOffer);
             socket.emit("call-user", { to: remoteId, offer: generatedOffer });
             setIsCalling(true);
         } else {
-            console.log("Hello 3");
             await peerConnection.current.setRemoteDescription(offer);
             const answer = await peerConnection.current.createAnswer();
             await peerConnection.current.setLocalDescription(answer);
@@ -125,7 +123,7 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
     return {
         isCalling,
         isInCall,
-        startCall: (remoteId) => startPeerConnection(true, remoteId),
+        startCall: (remoteId, callType) => startPeerConnection(true, remoteId, null, callType),
         endCall,
     };
 };
