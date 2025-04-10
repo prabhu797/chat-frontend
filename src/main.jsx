@@ -11,7 +11,7 @@ import { Toaster } from "react-hot-toast";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename='/chat-frontend'>
       <AuthProvider>
         <App />
       </AuthProvider>
