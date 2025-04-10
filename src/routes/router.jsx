@@ -10,15 +10,8 @@ const Dashboard = lazy(() => import("../pages/Dashboard")); // We'll create this
 const routes = [
   {
     path: "/",
-    element: (
-      <ProtectedRoute>
-        <MainLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      { path: "", element: <Dashboard /> },
-      // Add more protected pages here
-    ],
+    element: <AuthLayout />,
+    children: [{ path: "", element: <Login /> }],
   },
   {
     path: "/login",
