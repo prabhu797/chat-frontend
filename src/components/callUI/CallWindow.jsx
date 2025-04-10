@@ -7,10 +7,15 @@ const CallWindow = ({ remoteUserId }) => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
 
-  const { isCalling, isInCall, startCall, endCall } = useCall({
-    localVideoRef,
-    remoteVideoRef,
-  });
+  const {
+    isCalling,
+    isInCall,
+    incomingCall,
+    startCall,
+    acceptCall,
+    rejectCall,
+    endCall,
+  } = useCall({ localVideoRef, remoteVideoRef });
 
   return (
     <div className="flex flex-col items-center gap-4 p-4">
@@ -41,6 +46,15 @@ const CallWindow = ({ remoteUserId }) => {
           <Button variant="outlined" color="error" onClick={endCall}>
             End Call
           </Button>
+        )}
+        {incomingCall && (
+          <div className="bg-white shadow-lg rounded p-4">
+            <p>📞 Incoming {incomingCall.callType} call...</p>
+            <div className="flex gap-2 mt-2">
+              <Button variant="contained" onClick={acceptCall}>Accept</Button>
+              <Button variant="outlined" color="error" onClick={rejectCall}>Reject</Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

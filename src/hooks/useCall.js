@@ -1,4 +1,3 @@
-// src/hooks/useCall.js
 import { useEffect, useRef, useState } from "react";
 import { socket } from "../utils/socket";
 
@@ -6,7 +5,9 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
     const [isCalling, setIsCalling] = useState(false);
     const [isInCall, setIsInCall] = useState(false);
     const [remoteUserId, setRemoteUserId] = useState(null);
+    const [incomingCall, setIncomingCall] = useState(null); // { from, offer, callType }
     const peerConnection = useRef(null);
+    const pendingCandidates = useRef([]);
 
     const iceServers = {
         iceServers: [
@@ -16,7 +17,6 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
     };
 
     const startPeerConnection = async (isInitiator, remoteId, offer = null, callType) => {
-        console.log(callType);
         peerConnection.current = new RTCPeerConnection(iceServers);
         setRemoteUserId(remoteId);
 
@@ -31,6 +31,7 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
                 socket.emit("ice-candidate", {
                     to: remoteId,
                     candidate: event.candidate,
+                    callType: callType
                 });
             }
         };
@@ -48,32 +49,74 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
         if (isInitiator) {
             const generatedOffer = await peerConnection.current.createOffer();
             await peerConnection.current.setLocalDescription(generatedOffer);
-            socket.emit("call-user", { to: remoteId, offer: generatedOffer });
+            socket.emit("call-user", { to: remoteId, offer: generatedOffer, callType: callType });
             setIsCalling(true);
         } else {
             await peerConnection.current.setRemoteDescription(offer);
             const answer = await peerConnection.current.createAnswer();
             await peerConnection.current.setLocalDescription(answer);
-            socket.emit("answer-call", { to: remoteId, answer });
+            socket.emit("answer-call", { to: remoteId, answer, callType: callType });
             setIsInCall(true);
+
+            // ⬇️ Process any queued ICE candidates
+            for (const candidate of pendingCandidates.current) {
+                try {
+                    await peerConnection.current.addIceCandidate(candidate);
+                } catch (error) {
+                    console.error("Error adding queued ICE candidate", error);
+                }
+            }
+            pendingCandidates.current = [];
         }
     };
 
-    const handleIncomingCall = async ({ from, offer }) => {
-        await startPeerConnection(false, from, offer);
+    const handleIncomingCall = async ({ from, offer, callType }) => {
+        setIncomingCall({ from, offer, callType });
+    };
+
+    const acceptCall = async () => {
+        if (!incomingCall) return;
+        await startPeerConnection(false, incomingCall.from, incomingCall.offer, incomingCall.callType);
+        setIncomingCall(null);
+    };
+
+    const rejectCall = () => {
+        if (incomingCall) {
+            socket.emit("end-call", { to: incomingCall.from });
+            setIncomingCall(null);
+        }
     };
 
     const handleCallAnswered = async ({ answer }) => {
         await peerConnection.current.setRemoteDescription(answer);
         setIsInCall(true);
         setIsCalling(false);
+
+        // ⬇️ Process any queued ICE candidates
+        for (const candidate of pendingCandidates.current) {
+            try {
+                await peerConnection.current.addIceCandidate(candidate);
+            } catch (error) {
+                console.error("Error adding queued ICE candidate", error);
+            }
+        }
+        pendingCandidates.current = [];
     };
 
-    const handleIceCandidate = async ({ candidate }) => {
-        try {
-            await peerConnection.current.addIceCandidate(candidate);
-        } catch (error) {
-            console.error("Error adding ICE candidate", error);
+    const handleIceCandidate = async ({ candidate, callType }) => {
+        if (
+            peerConnection.current &&
+            peerConnection.current.remoteDescription &&
+            peerConnection.current.remoteDescription.type
+        ) {
+            try {
+                await peerConnection.current.addIceCandidate(candidate);
+            } catch (error) {
+                console.error("Error adding ICE candidate", error);
+            }
+        } else {
+            // Queue ICE candidate until remote description is set
+            pendingCandidates.current.push(candidate);
         }
     };
 
@@ -104,6 +147,8 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
             remoteVideoRef.current.srcObject.getTracks().forEach((t) => t.stop());
             remoteVideoRef.current.srcObject = null;
         }
+
+        pendingCandidates.current = [];
     };
 
     useEffect(() => {
@@ -125,5 +170,8 @@ export const useCall = ({ localVideoRef, remoteVideoRef }) => {
         isInCall,
         startCall: (remoteId, callType) => startPeerConnection(true, remoteId, null, callType),
         endCall,
+        incomingCall,
+        acceptCall,
+        rejectCall,
     };
 };
